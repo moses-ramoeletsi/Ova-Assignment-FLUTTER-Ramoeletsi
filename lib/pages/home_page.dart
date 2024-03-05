@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class HomaPage extends StatefulWidget {
-  const HomaPage({Key? key});
+  const HomaPage({super.key});
 
   @override
   State<HomaPage> createState() => _HomaPageState();
@@ -48,7 +48,7 @@ class _HomaPageState extends State<HomaPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Home Page'),
+        title: const Text('Home Page'),
         actions: [
           IconButton(onPressed: signOut, icon: const Icon(Icons.logout))
         ],
@@ -129,7 +129,7 @@ class _HomaPageState extends State<HomaPage> {
       );
     }).catchError((error) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Failed to update follow status. Please try again later.'),
         ),
       );
