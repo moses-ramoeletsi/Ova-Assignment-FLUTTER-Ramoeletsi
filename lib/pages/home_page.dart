@@ -1,4 +1,5 @@
 import 'package:chat_app/pages/chat_page.dart';
+import 'package:chat_app/pages/groups_pages.dart';
 import 'package:chat_app/services/auth/auth_services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -29,12 +30,11 @@ class _HomaPageState extends State<HomaPage> {
         .snapshots()
         .listen((snapshot) {
       if (snapshot.exists) {
-        // Extract follow status from snapshot data
         Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
         data.forEach((key, value) {
           followStatus[key] = value;
         });
-        setState(() {}); // Update UI
+        setState(() {}); 
       }
     });
   }
@@ -50,7 +50,16 @@ class _HomaPageState extends State<HomaPage> {
       appBar: AppBar(
         title: const Text('Home Page'),
         actions: [
-          IconButton(onPressed: signOut, icon: const Icon(Icons.logout))
+          IconButton(onPressed: signOut, icon: const Icon(Icons.logout)),
+          IconButton(
+            icon: const Icon(Icons.group),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const GroupsPage()), 
+              );
+            },
+          ),
         ],
       ),
       body: _buildUserList(),
