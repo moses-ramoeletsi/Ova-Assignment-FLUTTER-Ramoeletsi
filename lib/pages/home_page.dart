@@ -16,11 +16,14 @@ class HomaPage extends StatefulWidget {
 class _HomaPageState extends State<HomaPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   Map<String, bool> followStatus = {};
+  TextEditingController _searchController = TextEditingController();
+  late Stream<QuerySnapshot> _usersStream;
 
   @override
   void initState() {
     super.initState();
     _initializeFollowStatus();
+    _usersStream = FirebaseFirestore.instance.collection('users').snapshots();
   }
 
   void _initializeFollowStatus() {
@@ -34,7 +37,7 @@ class _HomaPageState extends State<HomaPage> {
         data.forEach((key, value) {
           followStatus[key] = value;
         });
-        setState(() {}); 
+        setState(() {});
       }
     });
   }
@@ -56,25 +59,47 @@ class _HomaPageState extends State<HomaPage> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const GroupsPage()), 
+                MaterialPageRoute(builder: (context) => const GroupsPage()),
               );
             },
           ),
         ],
       ),
-      body: _buildUserList(),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) {
+                setState(() {
+                  _usersStream = FirebaseFirestore.instance.collection('users').where('email', isGreaterThanOrEqualTo: value).snapshots();
+                });
+              },
+              decoration: InputDecoration(
+                labelText: 'Search by email',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ),
+          Expanded(
+            child: _buildUserList(),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildUserList() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('users').snapshots(),
+      stream: _usersStream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Text('error');
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Text('Loading...');
+          return const Center(child: CircularProgressIndicator());
         }
 
         return ListView(
@@ -90,7 +115,8 @@ class _HomaPageState extends State<HomaPage> {
     Map<String, dynamic> userData = document.data()! as Map<String, dynamic>;
 
     if (_auth.currentUser!.email != userData['email']) {
-      bool isFollowing = followStatus.containsKey(userData['uid']) && followStatus[userData['uid']]!;
+      bool isFollowing =
+          followStatus.containsKey(userData['uid']) && followStatus[userData['uid']]!;
       return ListTile(
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -105,15 +131,7 @@ class _HomaPageState extends State<HomaPage> {
           ],
         ),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ChatPagge(
-                userReceiverEmail: userData['email'],
-                userReceiverId: userData['uid'],
-              ),
-            ),
-          );
+          _startConversationIfFollowed(userData['uid'], userData);
         },
       );
     } else {
@@ -133,7 +151,9 @@ class _HomaPageState extends State<HomaPage> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(isFollowing ? 'You are now following this user.' : 'You have unfollowed this user.'),
+          content: Text(isFollowing
+              ? 'You are now following this user.'
+              : 'You have unfollowed this user.'),
         ),
       );
     }).catchError((error) {
@@ -143,5 +163,25 @@ class _HomaPageState extends State<HomaPage> {
         ),
       );
     });
+  }
+
+  void _startConversationIfFollowed(String userReceiverId, Map<String, dynamic> userData) {
+    if (followStatus.containsKey(userReceiverId) && followStatus[userReceiverId]!) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ChatPagge(
+            userReceiverEmail: userData['email'],
+            userReceiverId: userData['uid'],
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You can only start a conversation with users you are following.'),
+        ),
+      );
+    }
   }
 }
