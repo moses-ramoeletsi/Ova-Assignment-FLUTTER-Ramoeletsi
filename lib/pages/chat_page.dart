@@ -23,13 +23,42 @@ class _ChatPaggeState extends State<ChatPagge> {
   final ChatService _chatService = ChatService();
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
 
-  void sendMaessage() async {
-    if (_messageController.text.isNotEmpty) {
-      await _chatService.sendMessage(
-          widget.userReceiverId, _messageController.text);
+  bool _isEditing = false;
+  late String _editMessageId;
 
-      _messageController.clear();
+  void sendMessage() async {
+    if (_messageController.text.isNotEmpty) {
+      if (_isEditing) {
+        await _chatService.editMessage(
+            widget.userReceiverId,
+            _editMessageId,
+            _messageController.text
+        );
+        setState(() {
+          _isEditing = false;
+          _editMessageId = '';
+          _messageController.clear();
+        });
+      } else {
+        await _chatService.sendMessage(
+            widget.userReceiverId,
+            _messageController.text
+        );
+        _messageController.clear();
+      }
     }
+  }
+
+  void _editMessage(String messageId, String currentMessage) {
+    setState(() {
+      _isEditing = true;
+      _editMessageId = messageId;
+      _messageController.text = currentMessage;
+    });
+  }
+
+  void _deleteMessage(String messageId) {
+    _chatService.deleteMessage(widget.userReceiverId, messageId);
   }
 
   @override
@@ -44,7 +73,6 @@ class _ChatPaggeState extends State<ChatPagge> {
             child: _buildMessageList(),
           ),
           _buildMessageInput(),
-
           const SizedBox(height: 25),
         ],
       ),
@@ -57,45 +85,99 @@ class _ChatPaggeState extends State<ChatPagge> {
           widget.userReceiverId, _firebaseAuth.currentUser!.uid),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Text('Eror${snapshot.error}');
+          return Text('Error: ${snapshot.error}');
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Text('Loading');
         }
 
-        return ListView(
-          children: snapshot.data!.docs.map((document) => _buildMessageItem(document)).toList(),
+        return ListView.builder(
+          itemCount: snapshot.data!.docs.length,
+          itemBuilder: (context, index) {
+            var document = snapshot.data!.docs[index];
+            return _buildMessageItem(document);
+          },
         );
       },
     );
   }
 
-  Widget _buildMessageItem(DocumentSnapshot documnet) {
-    Map<String, dynamic> data = documnet.data() as Map<String, dynamic>;
-    var aligment = (data['senderId'] == _firebaseAuth.currentUser!.uid)
+  Widget _buildMessageItem(DocumentSnapshot document) {
+    Map<String, dynamic> data = document.data() as Map<String, dynamic>;
+    var alignment = (data['senderId'] == _firebaseAuth.currentUser!.uid)
         ? Alignment.centerRight
         : Alignment.centerLeft;
 
-    return Container(
-      alignment: aligment,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: (data['senderId'] == _firebaseAuth.currentUser!.uid)
-        ? CrossAxisAlignment.end
-        : CrossAxisAlignment.start,
-
-        mainAxisAlignment: (data['senderId'] == _firebaseAuth.currentUser!.uid)
-        ? MainAxisAlignment.end
-        : MainAxisAlignment.start,
-          children: [
-          Text(data['senderEmail']),
-          const SizedBox(height: 5),
-          ChatAppBubble(message: data['message'])
-        ]),
+    return GestureDetector(
+      onLongPress: () {
+        if (data['senderId'] == _firebaseAuth.currentUser!.uid) {
+          _editMessage(document.id, data['message']);
+        }
+      },
+      child: Dismissible(
+        key: Key(document.id),
+        confirmDismiss: (direction) async {
+          if (direction == DismissDirection.endToStart) {
+            return await showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  title: Text('Confirm Deletion'),
+                  content: Text('Are you sure you want to delete this message?'),
+                  actions: <Widget>[
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: Text('Delete'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: Text('Cancel'),
+                    ),
+                  ],
+                );
+              },
+            );
+          }
+          return false;
+        },
+        onDismissed: (direction) {
+          if (direction == DismissDirection.endToStart) {
+            _deleteMessage(document.id);
+          }
+        },
+        background: Container(
+          color: Colors.red,
+          alignment: Alignment.centerRight,
+          padding: EdgeInsets.only(right: 20.0),
+          child: Icon(
+            Icons.delete,
+            color: Colors.white,
+          ),
+        ),
+        child: Container(
+          alignment: alignment,
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              crossAxisAlignment: (data['senderId'] == _firebaseAuth.currentUser!.uid)
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
+              mainAxisAlignment: (data['senderId'] == _firebaseAuth.currentUser!.uid)
+                  ? MainAxisAlignment.end
+                  : MainAxisAlignment.start,
+              children: [
+                if (data['senderId'] != _firebaseAuth.currentUser!.uid)
+                  Text(data['senderEmail']),
+                const SizedBox(height: 5),
+                ChatAppBubble(message: data['message']),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
+
 
   Widget _buildMessageInput() {
     return Padding(
@@ -110,11 +192,12 @@ class _ChatPaggeState extends State<ChatPagge> {
             ),
           ),
           IconButton(
-              onPressed: sendMaessage,
-              icon: const Icon(
-                Icons.arrow_forward,
-                size: 40,
-              ))
+            onPressed: sendMessage,
+            icon: const Icon(
+              Icons.send,
+              size: 40,
+            ),
+          ),
         ],
       ),
     );
