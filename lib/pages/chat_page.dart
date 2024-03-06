@@ -141,7 +141,7 @@ class _ChatPaggeState extends State<ChatPagge> {
           return false;
         },
         onDismissed: (direction) {
-          if (direction == DismissDirection.endToStart) {
+          if (direction == DismissDirection.startToEnd) {
             _deleteMessage(document.id);
           }
         },
