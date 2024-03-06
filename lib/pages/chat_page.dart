@@ -117,7 +117,7 @@ class _ChatPaggeState extends State<ChatPagge> {
       child: Dismissible(
         key: Key(document.id),
         confirmDismiss: (direction) async {
-          if (direction == DismissDirection.endToStart) {
+          if (direction == DismissDirection.startToEnd) {
             return await showDialog(
               context: context,
               builder: (BuildContext context) {
@@ -146,13 +146,7 @@ class _ChatPaggeState extends State<ChatPagge> {
           }
         },
         background: Container(
-          color: Colors.red,
-          alignment: Alignment.centerRight,
-          padding: EdgeInsets.only(right: 20.0),
-          child: Icon(
-            Icons.delete,
-            color: Colors.white,
-          ),
+          color: Colors.white,
         ),
         child: Container(
           alignment: alignment,

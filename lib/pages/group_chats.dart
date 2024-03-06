@@ -113,13 +113,7 @@ class _GroupChatsState extends State<GroupChats> {
                 key: Key(messages[index].id),
                 direction: DismissDirection.startToEnd,
                 background: Container(
-                  color: Colors.red,
-                  alignment: Alignment.centerLeft,
-                  padding: EdgeInsets.only(left: 20.0),
-                  child: Icon(
-                    Icons.delete,
-                    color: Colors.white,
-                  ),
+                  color: Colors.white,
                 ),
                 confirmDismiss: (direction) async {
                   if (direction == DismissDirection.startToEnd) {
