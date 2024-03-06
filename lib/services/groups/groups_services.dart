@@ -62,4 +62,32 @@ class GroupService {
       'members': FieldValue.arrayRemove([userId]),
     });
   }
+
+  Future<void> editMessageInGroup(String groupId, String messageId, String newMessage) async {
+    try {
+      await _firestore
+          .collection('groupRooms')
+          .doc(groupId)
+          .collection('groupsmesaages')
+          .doc(messageId)
+          .update({'message': newMessage});
+    } catch (e) {
+      print('Error editing message: $e');
+      throw Exception('Failed to edit message');
+    }
+  }
+
+  Future<void> deleteMessage(String groupId, String messageId) async {
+    try {
+      await _firestore
+          .collection('groupRooms')
+          .doc(groupId)
+          .collection('groupsmesaages')
+          .doc(messageId)
+          .delete();
+    } catch (e) {
+      print('Error deleting message: $e');
+      throw Exception('Failed to delete message');
+    }
+  }
 }

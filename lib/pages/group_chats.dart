@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:chat_app/services/groups/groups_services.dart';
 
+import '../components/group_bubble.dart'; // Import your custom bubble widget
+
 class GroupChats extends StatefulWidget {
   final String groupName;
   final String groupId;
@@ -16,12 +18,46 @@ class GroupChats extends StatefulWidget {
 class _GroupChatsState extends State<GroupChats> {
   final TextEditingController _messageController = TextEditingController();
   final GroupService _groupService = GroupService();
+  bool _isEditing = false;
+  late String _editMessageId;
 
-  void _sendMessage() {
-    String message = _messageController.text.trim();
-    if (message.isNotEmpty) {
-      _groupService.sendMessageToGroup(widget.groupId, message);
-      _messageController.clear();
+  void _sendMessage() async {
+    if (_messageController.text.isNotEmpty) {
+      if (_isEditing) {
+        await _groupService.editMessageInGroup(
+            widget.groupId,
+            _editMessageId,
+            _messageController.text
+        );
+        setState(() {
+          _isEditing = false;
+          _editMessageId = '';
+          _messageController.clear();
+        });
+      } else {
+        await _groupService.sendMessageToGroup(
+            widget.groupId,
+            _messageController.text
+        );
+        _messageController.clear();
+      }
+    }
+  }
+
+  void _editMessage(String messageId, String currentMessage) {
+    setState(() {
+      _isEditing = true;
+      _editMessageId = messageId;
+      _messageController.text = currentMessage;
+    });
+  }
+
+  void _deleteMessage(String messageId) async {
+    try {
+      await _groupService.deleteMessage(widget.groupId, messageId);
+    } catch (e) {
+      print('Error deleting message: $e');
+      // Handle error if needed
     }
   }
 
@@ -43,56 +79,89 @@ class _GroupChatsState extends State<GroupChats> {
   }
 
   Widget _buildMessagesList() {
-  return StreamBuilder(
-    stream: _groupService.getMessagesFromGroup(widget.groupId),
-    builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-      if (snapshot.hasError) {
-        return Text('Error: ${snapshot.error}');
-      }
+    return StreamBuilder(
+      stream: _groupService.getMessagesFromGroup(widget.groupId),
+      builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+        if (snapshot.hasError) {
+          return Text('Error: ${snapshot.error}');
+        }
 
-      if (snapshot.connectionState == ConnectionState.waiting) {
-        return const Center(child: CircularProgressIndicator());
-      }
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-      List<QueryDocumentSnapshot> messages = snapshot.data!.docs;
+        List<QueryDocumentSnapshot> messages = snapshot.data!.docs;
 
-      return ListView.builder(
-        itemCount: messages.length,
-        itemBuilder: (context, index) {
-          var message = messages[index].data() as Map<String, dynamic>;
-          bool isSender = message['senderId'] == _groupService.currentUserId;
+        return ListView.builder(
+          itemCount: messages.length,
+          itemBuilder: (context, index) {
+            var message = messages[index].data() as Map<String, dynamic>?;
 
-          return ListTile(
-            title: Align(
-              alignment: isSender ? Alignment.centerRight : Alignment.centerLeft,
-              child: Text(
-                message['senderEmail'], 
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: isSender ? Colors.blue : Colors.black,
+            if (message == null) {
+              return SizedBox();
+            }
+
+            bool isSender = (message['senderId'] ?? '') == _groupService.currentUserId;
+
+            return GestureDetector(
+              onLongPress: () {
+                if (isSender) {
+                  _editMessage(messages[index].id, message['message']);
+                }
+              },
+              child: Dismissible(
+                key: Key(messages[index].id),
+                direction: DismissDirection.startToEnd,
+                background: Container(
+                  color: Colors.red,
+                  alignment: Alignment.centerLeft,
+                  padding: EdgeInsets.only(left: 20.0),
+                  child: Icon(
+                    Icons.delete,
+                    color: Colors.white,
+                  ),
+                ),
+                confirmDismiss: (direction) async {
+                  if (direction == DismissDirection.startToEnd) {
+                    return await showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: Text('Confirm Deletion'),
+                          content: Text('Are you sure you want to delete this message?'),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(true),
+                              child: Text('Delete'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(false),
+                              child: Text('Cancel'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  }
+                  return false;
+                },
+                onDismissed: (direction) {
+                  if (direction == DismissDirection.startToEnd) {
+                    _deleteMessage(messages[index].id);
+                  }
+                },
+                child: MessageBubble(
+                  senderEmail: message['senderEmail'] ?? 'Unknown',
+                  message: message['message'] ?? 'No message',
+                  isSender: isSender,
                 ),
               ),
-            ),
-            subtitle: Align(
-              alignment: isSender ? Alignment.centerRight : Alignment.centerLeft,
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                decoration: BoxDecoration(
-                  color: isSender ? Colors.blue : Colors.grey,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  message['message'],
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-            ),
-          );
-        },
-      );
-    },
-  );
-}
+            );
+          },
+        );
+      },
+    );
+  }
 
   Widget _buildMessageInput() {
     return Padding(
