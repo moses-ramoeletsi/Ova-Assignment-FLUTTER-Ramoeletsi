@@ -94,7 +94,6 @@ class _GroupChatsState extends State<GroupChats> {
   );
 }
 
-
   Widget _buildMessageInput() {
     return Padding(
       padding: const EdgeInsets.all(8.0),
