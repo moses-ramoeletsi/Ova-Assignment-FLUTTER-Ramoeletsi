@@ -6,14 +6,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class HomaPage extends StatefulWidget {
-  const HomaPage({super.key});
+class HomePage extends StatefulWidget {
+  const HomePage({Key? key}) : super(key: key);
 
   @override
-  State<HomaPage> createState() => _HomaPageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _HomaPageState extends State<HomaPage> {
+class _HomePageState extends State<HomePage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   Map<String, bool> followStatus = {};
   TextEditingController _searchController = TextEditingController();
@@ -73,12 +73,15 @@ class _HomaPageState extends State<HomaPage> {
               controller: _searchController,
               onChanged: (value) {
                 setState(() {
-                  _usersStream = FirebaseFirestore.instance.collection('users').where('email', isGreaterThanOrEqualTo: value).snapshots();
+                  _usersStream = FirebaseFirestore.instance
+                      .collection('users')
+                      .where('email', isGreaterThanOrEqualTo: value)
+                      .snapshots();
                 });
               },
               decoration: InputDecoration(
                 labelText: 'Search by email',
-                prefixIcon: Icon(Icons.search),
+                prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(),
               ),
             ),
@@ -135,7 +138,7 @@ class _HomaPageState extends State<HomaPage> {
         },
       );
     } else {
-      return Container();
+      return const SizedBox(); // Avoid showing current user in the list
     }
   }
 
@@ -170,7 +173,7 @@ class _HomaPageState extends State<HomaPage> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => ChatPagge(
+          builder: (context) => ChatPage(
             userReceiverEmail: userData['email'],
             userReceiverId: userData['uid'],
           ),

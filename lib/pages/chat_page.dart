@@ -5,20 +5,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-class ChatPagge extends StatefulWidget {
+class ChatPage extends StatefulWidget {
   final String userReceiverEmail;
   final String userReceiverId;
 
-  const ChatPagge(
+  const ChatPage(
       {super.key,
       required this.userReceiverEmail,
       required this.userReceiverId});
 
   @override
-  State<ChatPagge> createState() => _ChatPaggeState();
+  State<ChatPage> createState() => _ChatPageState();
 }
 
-class _ChatPaggeState extends State<ChatPagge> {
+class _ChatPageState extends State<ChatPage> {
   final TextEditingController _messageController = TextEditingController();
   final ChatService _chatService = ChatService();
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
