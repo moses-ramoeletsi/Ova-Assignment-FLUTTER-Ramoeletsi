@@ -1,8 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:chat_app/services/groups/groups_services.dart';
-
-import '../components/group_bubble.dart'; // Import your custom bubble widget
+import '../components/group_bubble.dart';
 
 class GroupChats extends StatefulWidget {
   final String groupName;
@@ -121,12 +120,12 @@ class _GroupChatsState extends State<GroupChats> {
                       context: context,
                       builder: (BuildContext context) {
                         return AlertDialog(
-                          title: Text('Confirm Deletion'),
-                          content: Text('Are you sure you want to delete this message?'),
+                          title: const Text('Confirm Deletion'),
+                          content: const Text('Are you sure you want to delete this message?'),
                           actions: <Widget>[
                             TextButton(
                               onPressed: () => Navigator.of(context).pop(true),
-                              child: Text('Delete'),
+                              child: const Text('Delete'),
                             ),
                             TextButton(
                               onPressed: () => Navigator.of(context).pop(false),
